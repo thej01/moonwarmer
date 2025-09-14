@@ -12,6 +12,7 @@ Moonwarmer *lacks support for*
 
 - **Object modification/New objects (that isn't adding a new script)**
 - **Room modification/New rooms**
+- **General Info modifications (yet...?)**
 - **Fonts (yet...?)**
 
 Unless UTMT adds room/object exporting/importing, there won't be any support for those features.
