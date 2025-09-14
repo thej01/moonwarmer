@@ -1,4 +1,5 @@
 // Based of ImportGraphics.csx and ImportGML.csx
+// MOONWARMER -- a deltarune mass-import script.
 
 using System;
 using System.IO;
@@ -7,6 +8,7 @@ using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json;
 using UndertaleModLib.Util;
 using ImageMagick;
 
@@ -14,18 +16,47 @@ EnsureDataLoaded();
 
 // -- configuration -- 
 
-// enable this for modloader packages such as, deltamod, deltahub.
+bool packaged_moonwarmer = false;
+
+string moonwarmer_version = "v0";
+
+// -- loading project --
+
+string? project_folder = Path.GetDirectoryName(ScriptPath) + "/";
+if (!packaged_moonwarmer)
+{
+    ScriptMessage("Please select a moonwarmer STANDALONE folder/zip file. It should contain a file called _moonwarmer.json");
+    project_folder = PromptChooseDirectory();
+}
+
+if (project_folder is null)
+    throw new ScriptException("A folder/zip file was not set.");
+
+string moonwarmer_json = project_folder + "_moonwarmer.json";
+
+if (!File.Exists(moonwarmer_json))
+{
+    if (!packaged_moonwarmer)
+        throw new ScriptException("_moonwarmer.json not found! Make sure you selected the folder that contains _moonwarmer.json");
+    else
+        throw new ScriptException("_moonwarmer.json not found! Is moonwarmer.csx a directory too high/low? moonwarmer.csx should be right outside the src folder.");
+}
+
+// load the json file
+string txt = File.ReadAllText(moonwarmer_json);
+MoonwarmerJson? loaded_json = JsonSerializer.Deserialize<MoonwarmerJson>(txt);
+MoonwarmerMetadata? meta = loaded_json.metadata;
+// bruh
+if (loaded_json is null || meta is null || meta.name is null || meta.packageID is null || meta.version is null)
+    throw new ScriptException("_moonwarmer.json is invalid. Please make sure that your json follows proper syntax and has all required fields.");
+
+if (loaded_json.supportedPackageTypes is null)
+    loaded_json.supportedPackageTypes = new String[0];
+
 // if enabled, it just auto detects the chapter without confirmation (which should work fine, but just in case you can disable this)
 // if disabled, it will prompt the user to input the chapter number (with the autodetect value being the default)
-bool autodetect_chapter = false;
-
-// Project name. This is purely visual
-string projectName = "PROJECT NAME HERE";
-
-// determines if the csx file is IN the src folder rather than outside it.
-bool inSrcFolder = false;
-
-
+// also setting it like this kinda dumb but whatever
+bool autodetect_chapter = loaded_json.supportedPackageTypes.Length > 0;
 
 // -- importgrpahics stuff no one caresss --
 
@@ -65,15 +96,13 @@ if (!autodetect_chapter)
 
 string subProjName = "";
 if (chapter == 0)
-    subProjName = projectName + " Launcher";
+    subProjName = meta.name + " Launcher";
 else
-    subProjName = projectName + " Chapter " + chapter.ToString();
+    subProjName = meta.name + " Chapter " + chapter.ToString();
 
 // get important directories
 string scriptDir = Path.GetDirectoryName(ScriptPath);
-string srcDirectory = scriptDir + "/src";
-if (inSrcFolder)
-    srcDirectory = scriptDir;
+string srcDirectory = project_folder;
 string[] projectDirectories = new String[2];
 projectDirectories[0] = srcDirectory + "/_everychapter";
 projectDirectories[1] = srcDirectory + "/chapter" + chapter.ToString();
@@ -96,16 +125,17 @@ foreach (string dir in projectDirectories)
         spriteDirectories.Add(spriteDir);
 }
 
-SetProgressBar("Importing project files", "Sprite Folders", 0, spriteDirectories.Count + codeFiles.Count);
+int totalSpriteImages = 0;
+foreach (string dir in spriteDirectories)
+    totalSpriteImages += Directory.GetFiles(dir, "*.png", SearchOption.AllDirectories).Length;
+
+SetProgressBar("Importing project files", "Sprite Images", 0, totalSpriteImages + codeFiles.Count);
 StartProgressBarUpdater();
 SyncBinding("Sprites, Backgrounds, Fonts, EmbeddedTextures, TexturePageItems, Strings", true);
 await Task.Run(() =>
 {
     foreach (string dir in spriteDirectories)
-    {
-        IncrementProgress();
         ImportGraphics(dir, Data);
-    }
 });
 DisableAllSyncBindings();
 
@@ -185,6 +215,7 @@ void ImportGraphics(string sourceFolder, UndertaleData Data)
 
             foreach (Node n in atlas.Nodes)
             {
+                IncrementProgress();
                 if (n.Texture != null)
                 {
                     // Initalize values of this texture
@@ -777,6 +808,20 @@ public class Packer
         return img;
     }
 }
+
+public class MoonwarmerMetadata
+{
+    public string name { get; set; }
+    public string version { get; set; }
+    public string packageID { get; set; }
+}
+
+public class MoonwarmerJson
+{
+    public MoonwarmerMetadata metadata { get; set; }
+    public string[]? supportedPackageTypes { get; set; }
+}
+
 
 public static SpriteType GetSpriteType(string path)
 {
