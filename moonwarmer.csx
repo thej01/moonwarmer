@@ -1,8 +1,9 @@
-// Based of ImportGraphics.csx and ImportGML.csx
+// Based of ImportGraphics.csx, ImportGML.csx, ImportShaders.gml, ImportSounds.gml
 // MOONWARMER -- a deltarune mass-import script.
 
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Collections;
@@ -69,7 +70,6 @@ bool importAsSprite = false;
 // "(?:_(\d+))" - an underscore followed by digits;
 // "?:" = don't make a separate group for the whole part
 Regex sprFrameRegex = new(@"^(.+?)(?:_(\d+))$", RegexOptions.Compiled);
-string importFolder = "";
 
 bool noMasksForBasicRectangles = Data.IsVersionAtLeast(2022, 9); // TODO: figure out the exact version, but this is pretty close
 
@@ -104,38 +104,52 @@ else
 string scriptDir = Path.GetDirectoryName(ScriptPath);
 string srcDirectory = project_folder;
 string[] projectDirectories = new String[2];
-projectDirectories[0] = srcDirectory + "/_everychapter";
-projectDirectories[1] = srcDirectory + "/chapter" + chapter.ToString();
+projectDirectories[0] = srcDirectory + "_everychapter";
+projectDirectories[1] = srcDirectory + "chapter" + chapter.ToString();
 
 if (!Directory.Exists(srcDirectory))
     throw new ScriptException("src folder missing. Did you move the csx script, but not the src folder packaged with it? The src folder should be in the same directory as the csx script.");
 
 List<string> codeFiles = new List<string>();
 List<string> spriteDirectories = new List<string>();
+List<string> shaderDirectories = new List<string>();
 foreach (string dir in projectDirectories)
 {
     string scriptsDir = dir + "/scripts";
     string objectsDir = dir + "/objects";
     string spriteDir = dir + "/sprites";
+    string shaderDir = dir + "/shaders";
     if (Directory.Exists(scriptsDir))
         codeFiles.AddRange(Directory.GetFiles(scriptsDir, "*.gml", SearchOption.AllDirectories));
     if (Directory.Exists(objectsDir))
         codeFiles.AddRange(Directory.GetFiles(objectsDir, "*.gml", SearchOption.AllDirectories));
     if (Directory.Exists(spriteDir))
         spriteDirectories.Add(spriteDir);
+    if (Directory.Exists(shaderDir))
+        shaderDirectories.Add(shaderDir);
 }
 
 int totalSpriteImages = 0;
 foreach (string dir in spriteDirectories)
     totalSpriteImages += Directory.GetFiles(dir, "*.png", SearchOption.AllDirectories).Length;
 
-SetProgressBar("Importing project files", "Sprite Images", 0, totalSpriteImages + codeFiles.Count);
+SetProgressBar("Importing project files", "Sprite Images", 0, totalSpriteImages + codeFiles.Count + shaderDirectories.Count);
 StartProgressBarUpdater();
 SyncBinding("Sprites, Backgrounds, Fonts, EmbeddedTextures, TexturePageItems, Strings", true);
 await Task.Run(() =>
 {
     foreach (string dir in spriteDirectories)
         ImportGraphics(dir, Data);
+});
+DisableAllSyncBindings();
+
+UpdateProgressStatus("Shaders");
+
+SyncBinding("Strings, Shaders", true);
+await Task.Run(() =>
+{
+    foreach (string dir in shaderDirectories)
+        ImportShaders(dir);
 });
 DisableAllSyncBindings();
 
@@ -176,7 +190,7 @@ void ImportGraphics(string sourceFolder, UndertaleData Data)
     // "(.+?)" - match everything; "?" = match as few characters as possible.
     // "(?:_(\d+))" - an underscore followed by digits;
     // "?:" = don't make a separate group for the whole part
-    importFolder = CheckValidity(sourceFolder);
+    string importFolder = CheckValidity(sourceFolder);
 
     try
     {
@@ -215,9 +229,9 @@ void ImportGraphics(string sourceFolder, UndertaleData Data)
 
             foreach (Node n in atlas.Nodes)
             {
-                IncrementProgress();
                 if (n.Texture != null)
                 {
+                    IncrementProgress();
                     // Initalize values of this texture
                     UndertaleTexturePageItem texturePageItem = new();
                     texturePageItem.Name = new UndertaleString($"PageItem {++lastTextPageItem}");
@@ -903,23 +917,23 @@ string CheckValidity(string importFolder)
             // If it's not a first frame of the sprite
             if (spriteName == currSpriteName)
                 continue;
-            
+
             string[][] spriteFrames = Directory.GetFiles(importFolder, $"{spriteName}_*.png", SearchOption.AllDirectories)
                                                .Select(x =>
                                                {
-                                                  var match = sprFrameRegex.Match(Path.GetFileNameWithoutExtension(x));
-                                                  if (match.Groups[2].Success)
-                                                      return new string[] { match.Groups[1].Value, match.Groups[2].Value };
-                                                  else
-                                                      return null;
+                                                   var match = sprFrameRegex.Match(Path.GetFileNameWithoutExtension(x));
+                                                   if (match.Groups[2].Success)
+                                                       return new string[] { match.Groups[1].Value, match.Groups[2].Value };
+                                                   else
+                                                       return null;
                                                })
                                                .OfType<string[]>().ToArray();
             if (spriteFrames.Length == 1)
             {
                 currSpriteName = null;
                 continue;
-            }    
-            
+            }
+
             int[] frameIndexes = spriteFrames.Select(x =>
             {
                 if (Int32.TryParse(x[1], out int frame))
@@ -932,7 +946,7 @@ string CheckValidity(string importFolder)
                 currSpriteName = null;
                 continue;
             }
-            
+
             for (int i = 0; i < frameIndexes.Length - 1; i++)
             {
                 int num = frameIndexes[i];
@@ -946,4 +960,188 @@ string CheckValidity(string importFolder)
         }
     }
     return importFolder;
+}
+
+// -- ImportShaders.csx --
+
+void ImportShaders(string importFolder)
+{
+    var shadersToModify = Directory.GetDirectories(importFolder).Select(x => Path.GetFileName(x));
+    List<string> shadersExisting = new List<string>();
+    List<string> shadersNonExist = new List<string>();
+    List<string> currentList = new List<string>();
+    string res = "";
+
+    foreach (string shaderName in shadersToModify)
+    {
+        currentList.Clear();
+        for (int j = 0; j < Data.Shaders.Count; j++)
+        {
+            string x = Data.Shaders[j].Name.Content;
+            res += x + "\n";
+            currentList.Add(x);
+        }
+
+        IncrementProgress();
+        if (Data.Shaders.ByName(shaderName) != null)
+        {
+            Data.Shaders.Remove(Data.Shaders.ByName(shaderName));
+            AddShader(shaderName, importFolder);
+            Reorganize<UndertaleShader>(Data.Shaders, currentList);
+        }
+        else
+            AddShader(shaderName, importFolder);
+    }
+}
+
+void AddShader(string shader_name, string importFolder)
+{
+    UndertaleShader new_shader = new UndertaleShader();
+    new_shader.Name = Data.Strings.MakeString(shader_name);
+    string localImportDir = importFolder + "/" + shader_name + "/";
+    if (File.Exists(localImportDir + "Type.txt"))
+    {
+        string shader_type = File.ReadAllText(localImportDir + "Type.txt");
+        if (shader_type.Contains("GLSL_ES"))
+            new_shader.Type = UndertaleShader.ShaderType.GLSL_ES;
+        else if (shader_type.Contains("GLSL"))
+            new_shader.Type = UndertaleShader.ShaderType.GLSL;
+        else if (shader_type.Contains("HLSL9"))
+            new_shader.Type = UndertaleShader.ShaderType.HLSL9;
+        else if (shader_type.Contains("HLSL11"))
+            new_shader.Type = UndertaleShader.ShaderType.HLSL11;
+        else if (shader_type.Contains("PSSL"))
+            new_shader.Type = UndertaleShader.ShaderType.PSSL;
+        else if (shader_type.Contains("Cg_PSVita"))
+            new_shader.Type = UndertaleShader.ShaderType.Cg_PSVita;
+        else if (shader_type.Contains("Cg_PS3"))
+            new_shader.Type = UndertaleShader.ShaderType.Cg_PS3;
+        else
+            new_shader.Type = UndertaleShader.ShaderType.GLSL_ES;
+    }
+    else
+        new_shader.Type = UndertaleShader.ShaderType.GLSL_ES;
+    if (File.Exists(localImportDir + "GLSL_ES_Fragment.txt"))
+        new_shader.GLSL_ES_Fragment = Data.Strings.MakeString(File.ReadAllText(localImportDir + "GLSL_ES_Fragment.txt"));
+    else
+        new_shader.GLSL_ES_Fragment = Data.Strings.MakeString("");
+    if (File.Exists(localImportDir + "GLSL_ES_Vertex.txt"))
+        new_shader.GLSL_ES_Vertex = Data.Strings.MakeString(File.ReadAllText(localImportDir + "GLSL_ES_Vertex.txt"));
+    else
+        new_shader.GLSL_ES_Vertex = Data.Strings.MakeString("");
+    if (File.Exists(localImportDir + "GLSL_Fragment.txt"))
+        new_shader.GLSL_Fragment = Data.Strings.MakeString(File.ReadAllText(localImportDir + "GLSL_Fragment.txt"));
+    else
+        new_shader.GLSL_Fragment = Data.Strings.MakeString("");
+    if (File.Exists(localImportDir + "GLSL_Vertex.txt"))
+        new_shader.GLSL_Vertex = Data.Strings.MakeString(File.ReadAllText(localImportDir + "GLSL_Vertex.txt"));
+    else
+        new_shader.GLSL_Vertex = Data.Strings.MakeString("");
+    if (File.Exists(localImportDir + "HLSL9_Fragment.txt"))
+        new_shader.HLSL9_Fragment = Data.Strings.MakeString(File.ReadAllText(localImportDir + "HLSL9_Fragment.txt"));
+    else
+        new_shader.HLSL9_Fragment = Data.Strings.MakeString("");
+    if (File.Exists(localImportDir + "HLSL9_Vertex.txt"))
+        new_shader.HLSL9_Vertex = Data.Strings.MakeString(File.ReadAllText(localImportDir + "HLSL9_Vertex.txt"));
+    else
+        new_shader.HLSL9_Vertex = Data.Strings.MakeString("");
+    if (File.Exists(localImportDir + "HLSL11_VertexData.bin"))
+    {
+        new_shader.HLSL11_VertexData = new UndertaleShader.UndertaleRawShaderData();
+        new_shader.HLSL11_VertexData.Data = File.ReadAllBytes(localImportDir + "HLSL11_VertexData.bin");
+        new_shader.HLSL11_VertexData.IsNull = false;
+    }
+    if (File.Exists(localImportDir + "HLSL11_PixelData.bin"))
+    {
+        new_shader.HLSL11_PixelData = new UndertaleShader.UndertaleRawShaderData();
+        new_shader.HLSL11_PixelData.IsNull = false;
+        new_shader.HLSL11_PixelData.Data = File.ReadAllBytes(localImportDir + "HLSL11_PixelData.bin");
+    }
+    if (File.Exists(localImportDir + "PSSL_VertexData.bin"))
+    {
+        new_shader.PSSL_VertexData = new UndertaleShader.UndertaleRawShaderData();
+        new_shader.PSSL_VertexData.IsNull = false;
+        new_shader.PSSL_VertexData.Data = File.ReadAllBytes(localImportDir + "PSSL_VertexData.bin");
+    }
+    if (File.Exists(localImportDir + "PSSL_PixelData.bin"))
+    {
+        new_shader.PSSL_PixelData = new UndertaleShader.UndertaleRawShaderData();
+        new_shader.PSSL_PixelData.IsNull = false;
+        new_shader.PSSL_PixelData.Data = File.ReadAllBytes(localImportDir + "PSSL_PixelData.bin");
+    }
+    if (File.Exists(localImportDir + "Cg_PSVita_VertexData.bin"))
+    {
+        new_shader.Cg_PSVita_VertexData = new UndertaleShader.UndertaleRawShaderData();
+        new_shader.Cg_PSVita_VertexData.IsNull = false;
+        new_shader.Cg_PSVita_VertexData.Data = File.ReadAllBytes(localImportDir + "Cg_PSVita_VertexData.bin");
+    }
+    if (File.Exists(localImportDir + "Cg_PSVita_PixelData.bin"))
+    {
+        new_shader.Cg_PSVita_PixelData = new UndertaleShader.UndertaleRawShaderData();
+        new_shader.Cg_PSVita_PixelData.IsNull = false;
+        new_shader.Cg_PSVita_PixelData.Data = File.ReadAllBytes(localImportDir + "Cg_PSVita_PixelData.bin");
+    }
+    if (File.Exists(localImportDir + "Cg_PS3_VertexData.bin"))
+    {
+        new_shader.Cg_PS3_VertexData = new UndertaleShader.UndertaleRawShaderData();
+        new_shader.Cg_PS3_VertexData.IsNull = false;
+        new_shader.Cg_PS3_VertexData.Data = File.ReadAllBytes(localImportDir + "Cg_PS3_VertexData.bin");
+    }
+    if (File.Exists(localImportDir + "Cg_PS3_PixelData.bin"))
+    {
+        new_shader.Cg_PS3_PixelData = new UndertaleShader.UndertaleRawShaderData();
+        new_shader.Cg_PS3_PixelData.IsNull = false;
+        new_shader.Cg_PS3_PixelData.Data = File.ReadAllBytes(localImportDir + "Cg_PS3_PixelData.bin");
+    }
+    if (File.Exists(localImportDir + "VertexShaderAttributes.txt"))
+    {
+        string line;
+        // Read the file and display it line by line.
+        StreamReader file = new StreamReader(localImportDir + "VertexShaderAttributes.txt");
+        while((line = file.ReadLine()) != null)
+        {
+            line = line.Trim();
+            if (line != "")
+            {
+                UndertaleShader.VertexShaderAttribute vertex_x = new UndertaleShader.VertexShaderAttribute();
+                vertex_x.Name = Data.Strings.MakeString(line);
+                new_shader.VertexShaderAttributes.Add(vertex_x);
+            }
+        }
+        file.Close();
+    }
+    Data.Shaders.Add(new_shader);
+}
+
+void Reorganize<T>(IList<T> list, List<string> order) where T : UndertaleNamedResource, new()
+{
+    Dictionary<string, T> temp = new Dictionary<string, T>();
+    for (int i = 0; i < list.Count; i++)
+    {
+        T asset = list[i];
+        string assetName = asset.Name?.Content;
+        if (order.Contains(assetName))
+        {
+            temp[assetName] = asset;
+        }
+    }
+
+    List<T> addOrder = new List<T>();
+    for (int i = order.Count - 1; i >= 0; i--)
+    {
+        T asset;
+        try
+        {
+            asset = temp[order[i]];
+        } catch (Exception e)
+        {
+            throw new ScriptException("Missing asset with name \"" + order[i] + "\"");
+        }
+        addOrder.Add(asset);
+    }
+
+    foreach (T asset in addOrder)
+        list.Remove(asset);
+    foreach (T asset in addOrder)
+        list.Insert(0, asset);
 }
