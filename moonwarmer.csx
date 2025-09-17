@@ -641,8 +641,6 @@ bool MoonwarmerAPI_get_mod_json(string codeName, bool was_here)
             string dr_ver = "noone";
             if (loaded_json.deltaruneVersion is not null)
                 dr_ver = "\"" + loaded_json.deltaruneVersion + "\"";
-            else
-                dr_ver = "noone";
 
             string meta_string = string.Format(
             """
