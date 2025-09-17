@@ -1,5 +1,7 @@
 // Based of ImportGraphics.csx, ImportGML.csx, ImportShaders.gml, ImportSingleSound.gml
 // MOONWARMER -- a deltarune mass-import script.
+// whyt are you like this why load assemblies from the DATA.WIN FOLDER IK HATE YOU YI HTEA YOU
+//#r "/moonwarmer_dependencies/DiffPlex.dll"
 
 using System;
 using System.IO;
@@ -13,6 +15,9 @@ using System.Text.Json;
 using UndertaleModLib;
 using UndertaleModLib.Util;
 using UndertaleModLib.Models;
+using Underanalyzer.Compiler;
+using Underanalyzer.Decompiler;
+using System.Reflection;
 using static UndertaleModLib.Models.UndertaleSound;
 using static UndertaleModLib.UndertaleData;
 using ImageMagick;
@@ -22,6 +27,48 @@ EnsureDataLoaded();
 // -- configuration -- 
 
 bool packaged_moonwarmer = false;
+
+// Try to merge code on existing files. Seems to work well but i cant trust anything.
+// This WILL merge code even if this is the first mod we're installing, and that's because
+// of data.win updates. I'm scared that could cause issues
+// Merge conflicts are automatically resolved in a last-mod-wins style.
+bool merge_code = true;
+
+// These arrays contains code files in the data.win where merging conflicts should result in *both modifications* being added. stupid i know.
+// Examples: scr_gamestart, initializer2_create_0
+// This is mainly for initialization files or info files, and it is hacky (and can cause compilier errors, but when it works, it's wonderful)
+
+// NOTE: this one checks if the name CONTAINS any of these
+string[] codemerging_always_add_contains =
+[
+    "gamestart",
+    "initializer_Create_0",
+    "initializer2_Create_0",
+    "scr_load_chapter",
+];
+
+// Same as above, but for exact matches
+string[] codemerging_always_add_exact =
+[
+    "gml_GlobalScript_scr_saveprocess",
+    "gml_GlobalScript_scr_save",
+    "gml_GlobalScript_scr_load",
+    "gml_GlobalScript_scr_text",
+    "gml_GlobalScript_scr_iteminfo",
+    "gml_GlobalScript_scr_armorinfo",
+    "gml_GlobalScript_scr_iteminfo",
+    "gml_GlobalScript_scr_keyiteminfo",
+    "gml_GlobalScript_scr_spellinfo",
+    "gml_GlobalScript_scr_litemname",
+    "gml_GlobalScript_scr_litemdesc",
+    "gml_GlobalScript_scr_litemuseb",
+    "gml_GlobalScript_scr_spelltext",
+    "gml_GlobalScript_scr_spell",
+    "gml_Object_obj_treasure_room_Create_0",
+    "gml_Object_obj_treasure_room_Other_10",
+];
+
+Assembly? diffplex = null;
 
 string moonwarmer_version = "v0";
 
@@ -53,7 +100,7 @@ MoonwarmerJson? loaded_json = JsonSerializer.Deserialize<MoonwarmerJson>(txt);
 MoonwarmerMetadata? meta = loaded_json.metadata;
 // bruh
 if (loaded_json is null || meta is null || meta.name is null || meta.packageID is null || meta.version is null)
-    throw new ScriptException("_moonwarmer.json is invalid. Please make sure that your json follows proper syntax and has all required fields.");
+    throw new ScriptException("_moonwarmer.json is invalid. Please make sure that your JSON follows proper JSON syntax rules and has all required fields.");
 
 if (loaded_json.supportedPackageTypes is null)
     loaded_json.supportedPackageTypes = new String[0];
@@ -62,6 +109,22 @@ if (loaded_json.supportedPackageTypes is null)
 // if disabled, it will prompt the user to input the chapter number (with the autodetect value being the default)
 // also setting it like this kinda dumb but whatever
 bool autodetect_chapter = loaded_json.supportedPackageTypes.Length > 0;
+
+// Load assembly
+if (merge_code)
+{
+    // SOOO because of an utmt limitation we have to load the dependency at runtime.
+    // Stupid i know.
+    string diffplex_asm_path = Path.GetDirectoryName(ScriptPath) + "/moonwarmer_dependencies/DiffPlex.dll";
+    if (File.Exists(diffplex_asm_path))
+        diffplex = Assembly.LoadFrom(diffplex_asm_path);
+    if (diffplex is null)
+    {
+        if (!autodetect_chapter)
+            ScriptWarning("Couldn't find DiffPlex.dll at " + diffplex_asm_path + "\nThis will not prevent the script from running, but code will not be merged.");
+        merge_code = false;
+    }
+}
 
 // -- importgrpahics stuff no one caresss --
 
@@ -147,6 +210,27 @@ foreach (string dir in projectDirectories)
     }
 }
 
+// Detect 2 duplicate (only 2 im lazy) code files if merging is enabled and then error (because merging fucks up if two of the same files are loaded)
+// Also just bad practice lol (makes me wonder if i should remove the if statement...)
+if (merge_code)
+{
+    List<string> seenCode = new List<string>();
+    List<string> seenCode_fullpath = new List<string>();
+    foreach (string file in codeFiles)
+    {
+        string fname = Path.GetFileName(file);
+        string pname = file;
+        if (seenCode.Contains(fname))
+        {
+            int dupIndex = seenCode.IndexOf(fname);
+            throw new ScriptException("There are two scripts with same name \"" + fname + "\" trying to be loaded at the same time!\n\nPath 1: "
+                                      + pname + "\n\nPath 2: " + seenCode_fullpath[dupIndex] + "\n\nPlease remove one of them.");
+        }
+        seenCode.Add(fname);
+        seenCode_fullpath.Add(pname);
+    }
+}
+
 int totalSpriteImages = 0;
 foreach (string dir in spriteDirectories)
     totalSpriteImages += Directory.GetFiles(dir, "*.png", SearchOption.AllDirectories).Length;
@@ -154,76 +238,274 @@ int totalShaderDirs = 0;
 foreach (string dir in shaderDirectories)
     totalShaderDirs += Directory.GetDirectories(dir).Length;
 
-SetProgressBar("Importing project files", "Sprite Images", 0, totalSpriteImages + codeFiles.Count + totalShaderDirs + audioFiles.Count);
-
-// Import Graphics
+SetProgressBar("Importing project files", "Initializing...", 0, totalSpriteImages + codeFiles.Count + totalShaderDirs + audioFiles.Count);
 StartProgressBarUpdater();
-if (totalSpriteImages > 0)
+
+string og_code_prefix = "___moonwarmer_original___";
+// setup decompile shit (this is dynamic cuz of below btw)
+dynamic globalDecompileContext = new GlobalDecompileContext(Data);
+
+// when we try to append from merge conflicts, we check if the code compiles, if it does, use it. if it doesn't, dont do append merging.
+// however, the function below is only in very recent versions of umt (we need it to parse code)
+bool can_recover_from_append = true;
+try
 {
-    SyncBinding("Sprites, Backgrounds, Fonts, EmbeddedTextures, TexturePageItems, Strings", true);
-    await Task.Run(() =>
+    globalDecompileContext.PrepareForCompilation();
+}
+catch (Exception e)
+{
+    SetUMTConsoleText("Append merge resolving has been disabled, update UMT to be able to enable it!");
+    can_recover_from_append = false;
+}
+
+IDecompileSettings decompilerSettings = Data.ToolInfo.DecompilerSettings;
+// diffplex  stuff  yea h
+// I HATE REFLECTION I HATE REFLECTION I HATE REFLECTION I HATE REFLECTIONI HATE REFLECTION I HATE REFLECTION I HATE REFLECTION I HATE REFLECTION I HATE REFLECTION I HATE REFLECTION
+object[]? mergeParams = null;
+object? threeDifObject = null;
+MethodInfo? createDiff = null;
+Type? threeDifResult = null;
+Type? threeWayDiffBlock = null;
+Type? threeWayChangeType = null;
+dynamic? threeWayChangeType_Unchanged = null;
+dynamic? threeWayChangeType_OldOnly = null;
+dynamic? threeWayChangeType_NewOnly = null;
+dynamic? threeWayChangeType_BothSame = null;
+dynamic? threeWayChangeType_Conflict = null;
+// TODO: get change types like insertion and deletion so the merging can be almost-perfect!
+if (merge_code)
+{
+    Type threeDifType = diffplex.GetType("DiffPlex.ThreeWayDiffer");
+    Type lineChunkerType = diffplex.GetType("DiffPlex.Chunkers.LineChunker");
+    threeWayDiffBlock = diffplex.GetType("DiffPlex.Model.ThreeWayDiffBlock");
+    threeDifResult = diffplex.GetType("DiffPlex.Model.ThreeWayDiffResult");
+    threeWayChangeType = diffplex.GetType("DiffPlex.Model.ThreeWayChangeType");
+    createDiff = threeDifType.GetMethod("CreateDiffs");
+
+    mergeParams = new object[6];
+    threeDifObject = Activator.CreateInstance(threeDifType);
+
+    threeWayChangeType_Unchanged = threeWayChangeType.GetField("Unchanged").GetValue(null);
+    threeWayChangeType_OldOnly = threeWayChangeType.GetField("OldOnly").GetValue(null);
+    threeWayChangeType_NewOnly = threeWayChangeType.GetField("NewOnly").GetValue(null);
+    threeWayChangeType_BothSame = threeWayChangeType.GetField("BothSame").GetValue(null);
+    threeWayChangeType_Conflict = threeWayChangeType.GetField("Conflict").GetValue(null);
+
+    mergeParams[0] = "";
+    mergeParams[1] = "";
+    mergeParams[2] = "";
+    mergeParams[3] = true;
+    mergeParams[4] = false;
+    mergeParams[5] = Activator.CreateInstance(lineChunkerType);
+}
+
+SyncBinding("Sprites, Backgrounds, Fonts, EmbeddedTextures, TexturePageItems, Strings, Scripts, Code, CodeLocals, GlobalInitScripts, GameObjects, Functions, Sounds, EmbeddedAudio, AudioGroups, Shaders", true);
+
+await Task.Run(() =>
+{
+    // Import Graphics
+    if (totalSpriteImages > 0)
     {
+        UpdateProgressStatus("Sprite Images");
+
         foreach (string dir in spriteDirectories)
             ImportGraphics(dir, Data);
-    });
-    DisableAllSyncBindings();
-}
+    }
 
-// Import Audio
-if (audioFiles.Count > 0)
-{
-    UpdateProgressStatus("Audio");
-    SyncBinding("Strings, Sounds, EmbeddedAudio, AudioGroups", true);
-    await Task.Run(() =>
+    // Import Audio
+    if (audioFiles.Count > 0)
     {
+        UpdateProgressStatus("Audio");
+
         foreach (string file in audioFiles)
             ImportSingleSound(file);
-    });
-    DisableAllSyncBindings();
-}
+    }
 
-// Import Shaders
-if (totalShaderDirs > 0)
-{
-    UpdateProgressStatus("Shaders");
-    SyncBinding("Strings, Shaders", true);
-    await Task.Run(() =>
+    // Import Shaders
+    if (totalShaderDirs > 0)
     {
+        UpdateProgressStatus("Shaders");
+
         foreach (string dir in shaderDirectories)
             ImportShaders(dir);
-    });
-    DisableAllSyncBindings();
-}
+    }
 
-// Import GML
-if (codeFiles.Count > 0)
-{
-    UpdateProgressStatus("Code");
-
-    SyncBinding("Strings, Code, CodeLocals, Scripts, GlobalInitScripts, GameObjects, Functions, Variables", true);
-    await Task.Run(() =>
+    // Import GML (but with merging cuz im just better tbh)
+    if (codeFiles.Count > 0)
     {
-        UndertaleModLib.Compiler.CodeImportGroup importGroup = new(Data)
-        {
-            AutoCreateAssets = true
-        };
+        UpdateProgressStatus("Code");
+        SyncBinding("Strings, Code, CodeLocals, Scripts, GlobalInitScripts, GameObjects, Functions, Variables", true);
+
+        UndertaleModLib.Compiler.CodeImportGroup importGroup = new(Data) { AutoCreateAssets = true };
         foreach (string file in codeFiles)
         {
             IncrementProgress();
-
-            string code = File.ReadAllText(file);
             string codeName = Path.GetFileNameWithoutExtension(file);
-            importGroup.QueueReplace(codeName, code);
+            string code = File.ReadAllText(file);
+
+            // we need to check if the file we're replacing exists yet
+            if (merge_code && Data.Code.ByName(codeName) is not null)
+            {
+                // Oh god. We need to merge. Oh god. Oh no. Worries. :(
+                importGroup.AutoCreateAssets = false;
+
+                // load current code
+                string current_code = MoonwarmerQuickDecompile(codeName);
+                string original_code = current_code;
+
+                // check if a moonwarmer original exists
+                string ogCodeName = og_code_prefix + codeName;
+                if (Data.Code.ByName(ogCodeName) is not null)
+                    // if it does, we need to load it for proper merging
+                    original_code = MoonwarmerQuickDecompile(ogCodeName);
+                else
+                    // if it doesn't lets make it after
+                    importGroup.QueueReplace(ogCodeName, current_code);
+
+                CompileScriptKind kind = GuessScriptKindFromName(codeName);
+
+                mergeParams[0] = original_code;
+                mergeParams[1] = current_code;
+                mergeParams[2] = code;
+
+                dynamic outputResult = createDiff.Invoke(threeDifObject, mergeParams);
+
+                bool append_conflicts = false;
+                if (codemerging_always_add_exact.Contains(codeName))
+                    append_conflicts = true;
+                else
+                {
+                    foreach (string name in codemerging_always_add_contains)
+                    {
+                        if (codeName.Contains(name))
+                        {
+                            append_conflicts = true;
+                            break;
+                        }
+                    }
+                }
+
+                string output_code = MoonwarmerCustomMerge(outputResult, append_conflicts);
+
+                // only works on very recent umt versions
+                if (append_conflicts && can_recover_from_append)
+                {
+                    CompileContext compileContext_result = new(output_code, kind, codeName, globalDecompileContext);
+                    compileContext_result.Parse();
+
+                    if (compileContext_result.HasErrors)
+                    {
+                        SetUMTConsoleText("!!! Errors when trying to append merge code " + codeName + " so we're just doing normal merging.");
+                        // append_conflicts resulted in a compilier error so lets just do a more basic merge
+                        output_code = MoonwarmerCustomMerge(outputResult, false);
+                    }
+                }
+
+                // Import our output and pray.
+                importGroup.AutoCreateAssets = true;
+                importGroup.QueueReplace(codeName, output_code);
+            }
+            else
+                // just import! no worries :)
+                importGroup.QueueReplace(codeName, code);
+
         }
         UpdateProgressStatus("Finishing import...");
         importGroup.Import();
-    });
-    DisableAllSyncBindings();
-}
+    }
+});
+
+DisableAllSyncBindings();
 
 await StopProgressBarUpdater();
-HideProgressBar();
 ScriptMessage("Project " + subProjName + " successfully imported.");
+
+string MoonwarmerQuickDecompile(string codeName)
+{
+    return new DecompileContext(globalDecompileContext, Data.Code.ByName(codeName), decompilerSettings).DecompileToString();
+}
+
+string[] StringToArray(string str)
+{
+    return str.Split("\n");
+}
+
+string ArrayToString(string[] stringArray)
+{
+    return string.Join("\n", stringArray);
+}
+
+string MoonwarmerCustomMerge(dynamic diffResult, bool append_conflicts = false)
+{
+    var mergedPieces = new List<string>();
+
+    var baseIndex = 0;
+    var oldIndex = 0;
+    var newIndex = 0;
+
+    foreach (dynamic block in diffResult.DiffBlocks)
+    {
+        // Add unchanged content before this block
+        while (baseIndex < block.BaseStart)
+        {
+            mergedPieces.Add(diffResult.PiecesBase[baseIndex]);
+            baseIndex++;
+            oldIndex++;
+            newIndex++;
+        }
+
+        // Can't use a switch statement because these are runtime...
+        if (block.ChangeType == threeWayChangeType_Unchanged)
+        {
+            // Add base content (all are the same)
+            for (int i = 0; i < block.BaseCount; i++)
+                mergedPieces.Add(diffResult.PiecesBase[baseIndex + i]);
+        }
+        else if (block.ChangeType == threeWayChangeType_OldOnly)
+        {
+            // Take old version
+            for (int i = 0; i < block.OldCount; i++)
+                mergedPieces.Add(diffResult.PiecesOld[oldIndex + i]);
+        }
+        else if (block.ChangeType == threeWayChangeType_NewOnly)
+        {
+            // Take new version
+            for (int i = 0; i < block.NewCount; i++)
+                mergedPieces.Add(diffResult.PiecesNew[newIndex + i]);
+        }
+        else if (block.ChangeType == threeWayChangeType_BothSame)
+        {
+            // Both made the same change, take either (we'll take old)
+            for (int i = 0; i < block.OldCount; i++)
+                mergedPieces.Add(diffResult.PiecesOld[oldIndex + i]);
+        }
+        else if (block.ChangeType == threeWayChangeType_Conflict)
+        {
+            // Last mod wins
+            for (int i = 0; i < block.NewCount; i++)
+                mergedPieces.Add(diffResult.PiecesNew[newIndex + i]);
+
+            if (append_conflicts)
+            {
+                for (int i = 0; i < block.OldCount; i++)
+                    mergedPieces.Add(diffResult.PiecesOld[oldIndex + i]);
+            }
+        }
+
+        baseIndex += block.BaseCount;
+        oldIndex += block.OldCount;
+        newIndex += block.NewCount;
+    }
+
+    // Add remaining unchanged content
+    while (baseIndex < diffResult.PiecesBase.Length)
+    {
+        mergedPieces.Add(diffResult.PiecesBase[baseIndex]);
+        baseIndex++;
+    }
+
+    return ArrayToString(mergedPieces.ToArray());
+}
 
 // SPRITE IMPORT CODE FROM IMPORTGRAPHICS.csx
 
@@ -1230,7 +1512,7 @@ void ImportSingleSound(string filePath)
     string audioGroupName = "";
     string folderName = Path.GetFileName(Path.GetDirectoryName(soundPath));
     bool needAGRP = false;
-        
+
     // Search for an existing sound with the given name.
     UndertaleSound existingSound = null;
     bool replaceSoundPropertiesCheck = false;
@@ -1280,7 +1562,7 @@ void ImportSingleSound(string filePath)
     // If the audiogroup ID is for the builtin audiogroup ID, it's embedded in the main data file and doesn't need to be loaded.
     if (audioGroupID == Data.GetBuiltinSoundGroupID())
         needAGRP = false;
-        
+
     // Create embedded audio entry if required.
     UndertaleEmbeddedAudio soundData = null;
     if ((embedSound && !needAGRP) || needAGRP)
@@ -1341,7 +1623,7 @@ void ImportSingleSound(string filePath)
         flags = UndertaleSound.AudioEntryFlags.Regular;
         audioID = -1;
     }
-        
+
     // Determine final embedded audio reference (or null).
     UndertaleEmbeddedAudio finalAudioReference = null;
     if (!embedSound)
@@ -1350,14 +1632,14 @@ void ImportSingleSound(string filePath)
         finalAudioReference = Data.EmbeddedAudio[embAudioID];
     if (embedSound && needAGRP)
         finalAudioReference = null;
-        
+
     // Determine final audio group reference (or null).
     UndertaleAudioGroup finalGroupReference = null;
     if (!usesAGRP)
         finalGroupReference = null;
     else
         finalGroupReference = needAGRP ? Data.AudioGroups[audioGroupID] : Data.AudioGroups[Data.GetBuiltinSoundGroupID()];
-        
+
     // Update/create actual sound asset.
     if (existingSound is null)
     {
@@ -1398,4 +1680,32 @@ void ImportSingleSound(string filePath)
         existingSound.AudioID = audioID;
         //ChangeSelection(existingSound);
     }
+}
+
+CompileScriptKind GuessScriptKindFromName(string? codeName)
+{
+    // If null, just assume script
+    if (codeName is null)
+        return CompileScriptKind.Script;
+
+    // Compare prefixes against known ones
+    const string globalScriptPrefix = "gml_GlobalScript_";
+    if (codeName.StartsWith(globalScriptPrefix, StringComparison.Ordinal))
+        // Output global script name as well
+        return CompileScriptKind.GlobalScript;
+
+    if (codeName.StartsWith("gml_Script", StringComparison.Ordinal))
+        return CompileScriptKind.Script;
+
+    if (codeName.StartsWith("gml_Object", StringComparison.Ordinal))
+        return CompileScriptKind.ObjectEvent;
+
+    if (codeName.StartsWith("gml_Room", StringComparison.Ordinal))
+        return CompileScriptKind.RoomCreationCode;
+
+    if (codeName.StartsWith("Timeline", StringComparison.Ordinal))
+        return CompileScriptKind.Timeline;
+
+    // Unknown; default to script
+    return CompileScriptKind.Script;
 }

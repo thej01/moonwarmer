@@ -1,0 +1,425 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>DiffPlex</name>
+    </assembly>
+    <members>
+        <member name="P:DiffPlex.Chunkers.CharacterChunker.Instance">
+            <summary>
+            Gets the default singleton instance of the chunker.
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Chunkers.LineChunker.Instance">
+            <summary>
+            Gets the default singleton instance of the chunker.
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Chunkers.LineEndingsPreservingChunker.Instance">
+            <summary>
+            Gets the default singleton instance of the chunker.
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Chunkers.WordChunker.Instance">
+            <summary>
+            Gets the default singleton instance of the chunker.
+            </summary>
+        </member>
+        <member name="P:DiffPlex.DiffBuilder.InlineDiffBuilder.Instance">
+            <summary>
+            Gets the default singleton instance of the inline diff builder.
+            </summary>
+        </member>
+        <member name="M:DiffPlex.DiffBuilder.InlineDiffBuilder.Diff(System.String,System.String,System.Boolean,System.Boolean,DiffPlex.IChunker)">
+            <summary>
+            Gets the inline textual diffs.
+            </summary>
+            <param name="oldText">The old text to diff.</param>
+            <param name="newText">The new text.</param>
+            <param name="ignoreWhiteSpace"><see langword="true"/> if ignore the white space; otherwise, <see langword="false"/>.</param>
+            <param name="ignoreCase"><see langword="true"/> if case-insensitive; otherwise, <see langword="false"/>.</param>
+            <param name="chunker">The chunker.</param>
+            <returns>The diffs result.</returns>
+        </member>
+        <member name="M:DiffPlex.DiffBuilder.InlineDiffBuilder.Diff(DiffPlex.IDiffer,System.String,System.String,System.Boolean,System.Boolean,DiffPlex.IChunker)">
+            <summary>
+            Gets the inline textual diffs.
+            </summary>
+            <param name="differ">The differ instance.</param>
+            <param name="oldText">The old text to diff.</param>
+            <param name="newText">The new text.</param>
+            <param name="ignoreWhiteSpace"><see langword="true"/> if ignore the white space; otherwise, <see langword="false"/>.</param>
+            <param name="ignoreCase"><see langword="true"/> if case-insensitive; otherwise, <see langword="false"/>.</param>
+            <param name="chunker">The chunker.</param>
+            <returns>The diffs result.</returns>
+        </member>
+        <member name="T:DiffPlex.DiffBuilder.ISideBySideDiffBuilder">
+            <summary>
+            Provides methods that generate differences between texts for displaying in a side by side view.
+            </summary>
+        </member>
+        <member name="M:DiffPlex.DiffBuilder.ISideBySideDiffBuilder.BuildDiffModel(System.String,System.String)">
+            <summary>
+            Builds a diff model for displaying diffs in a side by side view
+            </summary>
+            <param name="oldText">The old text.</param>
+            <param name="newText">The new text.</param>
+            <returns>The side by side diff model</returns>
+        </member>
+        <member name="T:DiffPlex.DiffBuilder.Model.SideBySideDiffModel">
+            <summary>
+            A model which represents differences between to texts to be shown side by side
+            </summary>
+        </member>
+        <member name="P:DiffPlex.DiffBuilder.SideBySideDiffBuilder.Instance">
+            <summary>
+            Gets the default singleton instance.
+            </summary>
+        </member>
+        <member name="M:DiffPlex.DiffBuilder.SideBySideDiffBuilder.Diff(System.String,System.String,System.Boolean,System.Boolean)">
+            <summary>
+            Gets the side-by-side textual diffs.
+            </summary>
+            <param name="oldText">The old text to diff.</param>
+            <param name="newText">The new text.</param>
+            <param name="ignoreWhiteSpace"><see langword="true"/> if ignore the white space; otherwise, <see langword="false"/>.</param>
+            <param name="ignoreCase"><see langword="true"/> if case-insensitive; otherwise, <see langword="false"/>.</param>
+            <returns>The diffs result.</returns>
+        </member>
+        <member name="M:DiffPlex.DiffBuilder.SideBySideDiffBuilder.Diff(DiffPlex.IDiffer,System.String,System.String,System.Boolean,System.Boolean,DiffPlex.IChunker,DiffPlex.IChunker)">
+            <summary>
+            Gets the side-by-side textual diffs.
+            </summary>
+            <param name="differ">The differ instance.</param>
+            <param name="oldText">The old text to diff.</param>
+            <param name="newText">The new text.</param>
+            <param name="ignoreWhiteSpace"><see langword="true"/> if ignore the white space; otherwise, <see langword="false"/>.</param>
+            <param name="ignoreCase"><see langword="true"/> if case-insensitive; otherwise, <see langword="false"/>.</param>
+            <param name="lineChunker">The line chunker.</param>
+            <param name="wordChunker">The word chunker.</param>
+            <returns>The diffs result.</returns>
+        </member>
+        <member name="P:DiffPlex.Differ.Instance">
+            <summary>
+            Gets the default singleton instance of differ instance.
+            </summary>
+        </member>
+        <member name="M:DiffPlex.Differ.CalculateEditLength(System.Int32[],System.Int32,System.Int32,System.Int32[],System.Int32,System.Int32)">
+            <summary>
+            Finds the middle snake and the minimum length of the edit script comparing string A and B
+            </summary>
+            <param name="A"></param>
+            <param name="startA">Lower bound inclusive</param>
+            <param name="endA">Upper bound exclusive</param>
+            <param name="B"></param>
+            <param name="startB">lower bound inclusive</param>
+            <param name="endB">upper bound exclusive</param>
+            <returns></returns>
+        </member>
+        <member name="T:DiffPlex.IChunker">
+            <summary>
+            Responsible for how to turn the document into pieces
+            </summary>
+        </member>
+        <member name="M:DiffPlex.IChunker.Chunk(System.String)">
+            <summary>
+            Divide text into sub-parts
+            </summary>
+        </member>
+        <member name="T:DiffPlex.IDiffer">
+            <summary>
+            Responsible for generating differences between texts
+            </summary>
+        </member>
+        <member name="M:DiffPlex.IDiffer.CreateDiffs(System.String,System.String,System.Boolean,System.Boolean,DiffPlex.IChunker)">
+            <summary>
+            Creates a diff by comparing text line by line.
+            </summary>
+            <param name="oldText">The old text.</param>
+            <param name="newText">The new text.</param>
+            <param name="ignoreWhiteSpace">If set to <see langword="true"/> will ignore white space when determining if lines are the same.</param>
+            <param name="ignoreCase">Determine if the text comparision is case sensitive or not</param>
+            <param name="chunker">Component responsible for tokenizing the compared texts</param>
+            <returns>A <see cref="T:DiffPlex.Model.DiffResult"/> object which details the differences</returns>
+        </member>
+        <member name="T:DiffPlex.IThreeWayDiffer">
+            <summary>
+            Responsible for generating three-way differences and merges between texts
+            </summary>
+        </member>
+        <member name="M:DiffPlex.IThreeWayDiffer.CreateDiffs(System.String,System.String,System.String,System.Boolean,System.Boolean,DiffPlex.IChunker)">
+            <summary>
+            Creates a three-way diff by comparing base, old, and new text line by line.
+            </summary>
+            <param name="baseText">The common base text.</param>
+            <param name="oldText">The old version of the text.</param>
+            <param name="newText">The new version of the text.</param>
+            <param name="ignoreWhiteSpace">If set to <see langword="true"/> will ignore white space when determining if lines are the same.</param>
+            <param name="ignoreCase">Determine if the text comparison is case sensitive or not</param>
+            <param name="chunker">Component responsible for tokenizing the compared texts</param>
+            <returns>A <see cref="T:DiffPlex.Model.ThreeWayDiffResult"/> object which details the differences</returns>
+        </member>
+        <member name="M:DiffPlex.IThreeWayDiffer.CreateMerge(System.String,System.String,System.String,System.Boolean,System.Boolean,DiffPlex.IChunker)">
+            <summary>
+            Creates a three-way merge by comparing base, old, and new text line by line.
+            </summary>
+            <param name="baseText">The common base text.</param>
+            <param name="oldText">The old version of the text.</param>
+            <param name="newText">The new version of the text.</param>
+            <param name="ignoreWhiteSpace">If set to <see langword="true"/> will ignore white space when determining if lines are the same.</param>
+            <param name="ignoreCase">Determine if the text comparison is case sensitive or not</param>
+            <param name="chunker">Component responsible for tokenizing the compared texts</param>
+            <returns>A <see cref="T:DiffPlex.Model.ThreeWayMergeResult"/> object which contains the merged result and conflict information</returns>
+        </member>
+        <member name="T:DiffPlex.Model.DiffBlock">
+            <summary>
+            A block of consecutive edits from A and/or B
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.DiffBlock.DeleteStartA">
+            <summary>
+            Position where deletions in A begin
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.DiffBlock.DeleteCountA">
+            <summary>
+            The number of deletions in A
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.DiffBlock.InsertStartB">
+            <summary>
+            Position where insertion in B begin
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.DiffBlock.InsertCountB">
+            <summary>
+            The number of insertions in B
+            </summary>
+        </member>
+        <member name="T:DiffPlex.Model.DiffResult">
+            <summary>
+            The result of diffing two pieces of text
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.DiffResult.PiecesOld">
+            <summary>
+            The chunked pieces of the old text
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.DiffResult.PiecesNew">
+            <summary>
+            The chunked pieces of the new text
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.DiffResult.DiffBlocks">
+            <summary>
+            A collection of DiffBlocks which details deletions and insertions
+            </summary>
+        </member>
+        <member name="T:DiffPlex.Model.ThreeWayConflictBlock">
+            <summary>
+            Represents a conflict block in a three-way merge where automatic resolution was not possible
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.ThreeWayConflictBlock.MergedStart">
+            <summary>
+            Position in the merged result where this conflict starts
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.ThreeWayConflictBlock.BasePieces">
+            <summary>
+            The base text pieces for this conflict
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.ThreeWayConflictBlock.OldPieces">
+            <summary>
+            Old text pieces for this conflict
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.ThreeWayConflictBlock.NewPieces">
+            <summary>
+            New text pieces for this conflict
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.ThreeWayConflictBlock.OriginalBlock">
+            <summary>
+            The original three-way diff block that caused this conflict
+            </summary>
+        </member>
+        <member name="T:DiffPlex.Model.ThreeWayChangeType">
+            <summary>
+            Represents the type of change in a three-way diff
+            </summary>
+        </member>
+        <member name="F:DiffPlex.Model.ThreeWayChangeType.Unchanged">
+            <summary>
+            No change from base in either old or new
+            </summary>
+        </member>
+        <member name="F:DiffPlex.Model.ThreeWayChangeType.OldOnly">
+            <summary>
+            Change only in old, new unchanged from base
+            </summary>
+        </member>
+        <member name="F:DiffPlex.Model.ThreeWayChangeType.NewOnly">
+            <summary>
+            Change only in new, old unchanged from base
+            </summary>
+        </member>
+        <member name="F:DiffPlex.Model.ThreeWayChangeType.BothSame">
+            <summary>
+            Same change in both old and new
+            </summary>
+        </member>
+        <member name="F:DiffPlex.Model.ThreeWayChangeType.Conflict">
+            <summary>
+            Different changes in old and new (conflict)
+            </summary>
+        </member>
+        <member name="T:DiffPlex.Model.ThreeWayDiffBlock">
+            <summary>
+            A block representing changes in a three-way diff
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.ThreeWayDiffBlock.BaseStart">
+            <summary>
+            Position where the block starts in base
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.ThreeWayDiffBlock.BaseCount">
+            <summary>
+            The number of pieces in base for this block
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.ThreeWayDiffBlock.OldStart">
+            <summary>
+            Position where the block starts in old
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.ThreeWayDiffBlock.OldCount">
+            <summary>
+            The number of pieces in old for this block
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.ThreeWayDiffBlock.NewStart">
+            <summary>
+            Position where the block starts in new
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.ThreeWayDiffBlock.NewCount">
+            <summary>
+            The number of pieces in new for this block
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.ThreeWayDiffBlock.ChangeType">
+            <summary>
+            The type of change this block represents
+            </summary>
+        </member>
+        <member name="T:DiffPlex.Model.ThreeWayDiffResult">
+            <summary>
+            The result of diffing three pieces of text (base, old, new)
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.ThreeWayDiffResult.PiecesBase">
+            <summary>
+            The chunked pieces of the base text
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.ThreeWayDiffResult.PiecesOld">
+            <summary>
+            The chunked pieces of the old text
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.ThreeWayDiffResult.PiecesNew">
+            <summary>
+            The chunked pieces of the new text
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.ThreeWayDiffResult.DiffBlocks">
+            <summary>
+            A collection of ThreeWayDiffBlocks which details the differences between the three texts
+            </summary>
+        </member>
+        <member name="T:DiffPlex.Model.ThreeWayMergeResult">
+            <summary>
+            The result of a three-way merge operation
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.ThreeWayMergeResult.MergedPieces">
+            <summary>
+            The merged text pieces
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.ThreeWayMergeResult.IsSuccessful">
+            <summary>
+            Whether the merge was successful without conflicts
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.ThreeWayMergeResult.ConflictBlocks">
+            <summary>
+            List of conflict blocks that could not be automatically merged
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Model.ThreeWayMergeResult.DiffResult">
+            <summary>
+            The three-way diff result that was used to create this merge
+            </summary>
+        </member>
+        <member name="T:DiffPlex.Renderer.UnidiffRenderer">
+            <summary>
+            Renderer for generating unified diff (unidiff) format output from diff results
+            </summary>
+        </member>
+        <member name="P:DiffPlex.Renderer.UnidiffRenderer.Instance">
+            <summary>
+            Gets the default singleton instance of the unidiff renderer.
+            </summary>
+        </member>
+        <member name="M:DiffPlex.Renderer.UnidiffRenderer.#ctor(DiffPlex.IDiffer,System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:DiffPlex.Renderer.UnidiffRenderer"/> class.
+            </summary>
+            <param name="differ">The differ to use. If null, uses the default Differ.</param>
+            <param name="contextLines">Number of unchanged context lines to include around changes.</param>
+        </member>
+        <member name="M:DiffPlex.Renderer.UnidiffRenderer.Generate(System.String,System.String,System.String,System.String,System.Boolean,System.Boolean)">
+            <summary>
+            Generates a unified diff format output from two texts.
+            </summary>
+            <param name="oldText">The old text to diff.</param>
+            <param name="newText">The new text.</param>
+            <param name="oldFileName">The old file name to show in the headers.</param>
+            <param name="newFileName">The new file name to show in the headers.</param>
+            <param name="ignoreWhitespace">Whether to ignore whitespace differences.</param>
+            <param name="ignoreCase">Whether to ignore case differences.</param>
+            <returns>A string containing the unified diff output.</returns>
+        </member>
+        <member name="M:DiffPlex.Renderer.UnidiffRenderer.Generate(DiffPlex.Model.DiffResult,System.String,System.String)">
+            <summary>
+            Generates a unified diff format output from a diff result.
+            </summary>
+            <param name="diffResult">The diff result to render.</param>
+            <param name="oldFileName">The old file name to show in the headers.</param>
+            <param name="newFileName">The new file name to show in the headers.</param>
+            <returns>A string containing the unified diff output.</returns>
+        </member>
+        <member name="M:DiffPlex.Renderer.UnidiffRenderer.GenerateUnidiff(System.String,System.String,System.String,System.String,System.Boolean,System.Boolean,System.Int32)">
+            <summary>
+            Generate a unified diff format output directly from two texts.
+            </summary>
+            <param name="oldText">The old text to diff.</param>
+            <param name="newText">The new text.</param>
+            <param name="oldFileName">The old file name to show in the headers.</param>
+            <param name="newFileName">The new file name to show in the headers.</param>
+            <param name="ignoreWhitespace">Whether to ignore whitespace differences.</param>
+            <param name="ignoreCase">Whether to ignore case differences.</param>
+            <param name="contextLines">Number of unchanged context lines to include around changes.</param>
+            <returns>A string containing the unified diff output.</returns>
+        </member>
+        <member name="P:DiffPlex.ThreeWayDiffer.Instance">
+            <summary>
+            Gets the default singleton instance of three-way differ.
+            </summary>
+        </member>
+    </members>
+</doc>
