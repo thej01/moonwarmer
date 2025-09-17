@@ -614,11 +614,16 @@ void MAPIInsertCurrent(string txt)
     lineno++;
 }
 
-string MAPIArrayToString<T>(T[] array)
+string MAPIArrayToString<T>(T[] array, string gml_type = "string")
 {
     string stringy = "[ ";
     foreach (T item in array)
-        stringy += item.ToString() + ", ";
+    {
+        string good_yummy = item.ToString();
+        if (gml_type == "string")
+            good_yummy = "\"" + good_yummy + "\"";
+        stringy += good_yummy + ", ";
+    }
     stringy += "]";
     return stringy;
 }
