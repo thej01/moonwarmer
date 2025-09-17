@@ -640,14 +640,16 @@ bool MoonwarmerAPI_get_mod_json(string codeName, bool was_here)
             MAPIInsertCurrent("case \"" + meta.packageID + "\":");
             string dr_ver = "noone";
             if (loaded_json.deltaruneVersion is not null)
-                dr_ver = loaded_json.deltaruneVersion.ToString();
+                dr_ver = "\"" + loaded_json.deltaruneVersion + "\"";
+            else
+                dr_ver = "noone";
 
             string meta_string = string.Format(
             """
             name: "{0}", version: "{1}", packageID: "{2}",
             """, meta.name, meta.version, meta.packageID);
 
-            string main_string = "metadata: {" + meta_string + "}, deltaruneVersion: \"" + dr_ver + "\",";
+            string main_string = "metadata: {" + meta_string + "}, deltaruneVersion: " + dr_ver + ",";
 
             string pkg_types_string = "supportedPackageTypes: " + MAPIArrayToString(loaded_json.supportedPackageTypes) + ",";
             string dr_variants_string = "deltaruneVariants: " + MAPIArrayToString(loaded_json.deltaruneVariants) + ",";
