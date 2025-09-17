@@ -343,14 +343,14 @@ await Task.Run(() =>
             ImportShaders(dir);
     }
 
+    // Moonwarmer API import
+    UpdateProgressStatus("Importing Moonwarmer API");
+    CodeImportGroup importGroup = new(Data) { AutoCreateAssets = true };
+    MoonwarmerImportAPI(importGroup);
+
     // Import GML (but with merging cuz im just better tbh)
     if (codeFiles.Count > 0)
     {
-        SyncBinding("Strings, Code, CodeLocals, Scripts, GlobalInitScripts, GameObjects, Functions, Variables", true);
-
-        CodeImportGroup importGroup = new(Data) { AutoCreateAssets = true };
-        UpdateProgressStatus("Importing Moonwarmer API");
-        MoonwarmerImportAPI(importGroup);
         UpdateProgressStatus("Code");
         foreach (string file in codeFiles)
         {
@@ -425,9 +425,10 @@ await Task.Run(() =>
                 importGroup.QueueReplace(codeName, code);
 
         }
-        UpdateProgressStatus("Finishing import...");
-        importGroup.Import();
     }
+    
+    UpdateProgressStatus("Finishing import...");
+    importGroup.Import();
 });
 
 DisableAllSyncBindings();
