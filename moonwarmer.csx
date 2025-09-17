@@ -70,11 +70,23 @@ string[] codemerging_always_add_exact =
 
 Assembly? diffplex = null;
 
-string moonwarmer_version = "v0";
+string moonwarmer_version = "v2";
+
+string scriptDir = Path.GetDirectoryName(ScriptPath);
+
+string moonwarmer_gml = scriptDir + "/moonwarmer_gml";
+
+if (!Directory.Exists(moonwarmer_gml))
+    throw new ScriptException("Couldn't find moonwarmer_gml folder!\nExpected at: " + moonwarmer_gml + "\nDid you move the csx script from the moonwarmer_gml folder?");
+
+string[] moonwarmer_gml_files = Directory.GetFiles(scriptDir, "*.gml", SearchOption.AllDirectories);
+
+if (moonwarmer_gml_files.Length <= 0)
+    throw new ScriptException("Couldn't find any moonwarmer .gml files in:\n" + moonwarmer_gml);
 
 // -- loading project --
 
-string? project_folder = Path.GetDirectoryName(ScriptPath) + "/";
+string? project_folder = scriptDir + "/";
 if (!packaged_moonwarmer)
 {
     ScriptMessage("Please select a moonwarmer STANDALONE folder/zip file. It should contain a file called _moonwarmer.json");
@@ -103,7 +115,9 @@ if (loaded_json is null || meta is null || meta.name is null || meta.packageID i
     throw new ScriptException("_moonwarmer.json is invalid. Please make sure that your JSON follows proper JSON syntax rules and has all required fields.");
 
 if (loaded_json.supportedPackageTypes is null)
-    loaded_json.supportedPackageTypes = new String[0];
+    loaded_json.supportedPackageTypes = [];
+if (loaded_json.deltaruneVariants is null)
+    loaded_json.deltaruneVariants = [];
 
 // if enabled, it just auto detects the chapter without confirmation (which should work fine, but just in case you can disable this)
 // if disabled, it will prompt the user to input the chapter number (with the autodetect value being the default)
@@ -115,7 +129,7 @@ if (merge_code)
 {
     // SOOO because of an utmt limitation we have to load the dependency at runtime.
     // Stupid i know.
-    string diffplex_asm_path = Path.GetDirectoryName(ScriptPath) + "/moonwarmer_dependencies/DiffPlex.dll";
+    string diffplex_asm_path = scriptDir + "/moonwarmer_dependencies/DiffPlex.dll";
     if (File.Exists(diffplex_asm_path))
         diffplex = Assembly.LoadFrom(diffplex_asm_path);
     if (diffplex is null)
@@ -154,7 +168,7 @@ if (!int.TryParse(nums, out chapter))
 if (!autodetect_chapter)
 {
     string txt = SimpleTextInput("Chapter Number", "Input Chapter number (0 for launcher) Autodetected as chapter " + chapter.ToString(), chapter.ToString(), false);
-    if (txt == null)
+    if (txt is null)
         throw new ScriptException("The chapter number was not set.");
     bool worked = int.TryParse(txt, out chapter);
     if (!worked)
@@ -168,13 +182,12 @@ else
     subProjName = meta.name + " Chapter " + chapter.ToString();
 
 // get important directories
-string scriptDir = Path.GetDirectoryName(ScriptPath);
 string srcDirectory = project_folder;
 string[] projectDirectories = new String[2];
 projectDirectories[0] = srcDirectory + "_everychapter";
 projectDirectories[1] = srcDirectory + "chapter" + chapter.ToString();
 
-if (!Directory.Exists(srcDirectory))
+if (!Directory.Exists(srcDirectory) && autodetect_chapter)
     throw new ScriptException("src folder missing. Did you move the csx script, but not the src folder packaged with it? The src folder should be in the same directory as the csx script.");
 
 List<string> codeFiles = new List<string>();
@@ -238,7 +251,7 @@ int totalShaderDirs = 0;
 foreach (string dir in shaderDirectories)
     totalShaderDirs += Directory.GetDirectories(dir).Length;
 
-SetProgressBar("Importing project files", "Initializing...", 0, totalSpriteImages + codeFiles.Count + totalShaderDirs + audioFiles.Count);
+SetProgressBar("Importing project files", "Initalizing...", 0, totalSpriteImages + codeFiles.Count + totalShaderDirs + audioFiles.Count + moonwarmer_gml_files.Length);
 StartProgressBarUpdater();
 
 string og_code_prefix = "___moonwarmer_original___";
@@ -333,10 +346,12 @@ await Task.Run(() =>
     // Import GML (but with merging cuz im just better tbh)
     if (codeFiles.Count > 0)
     {
-        UpdateProgressStatus("Code");
         SyncBinding("Strings, Code, CodeLocals, Scripts, GlobalInitScripts, GameObjects, Functions, Variables", true);
 
-        UndertaleModLib.Compiler.CodeImportGroup importGroup = new(Data) { AutoCreateAssets = true };
+        CodeImportGroup importGroup = new(Data) { AutoCreateAssets = true };
+        UpdateProgressStatus("Importing Moonwarmer API");
+        MoonwarmerImportAPI(importGroup);
+        UpdateProgressStatus("Code");
         foreach (string file in codeFiles)
         {
             IncrementProgress();
@@ -505,6 +520,166 @@ string MoonwarmerCustomMerge(dynamic diffResult, bool append_conflicts = false)
     }
 
     return ArrayToString(mergedPieces.ToArray());
+}
+
+List<string> api_code_array = new List<string>();
+int lineno = 0;
+// imports the moonwarmer api into the data.win (or updates it if its already there)
+void MoonwarmerImportAPI(CodeImportGroup importGroup)
+{
+    foreach (string gml in moonwarmer_gml_files)
+    {
+        IncrementProgress();
+        string codeName = Path.GetFileNameWithoutExtension(gml);
+        string code = "";
+        bool was_here = false;
+        // if it isnt there read from file
+        if (Data.Code.ByName(codeName) is null)
+            code = File.ReadAllText(gml);
+        else
+        {
+            // read from current code
+            code = MoonwarmerQuickDecompile(codeName);
+            was_here = true;
+        }
+
+        api_code_array = StringToArray(code).ToList();
+
+        bool import = MoonwarmerHandleAPIFunc(codeName, was_here);
+
+        if (import)
+            importGroup.QueueReplace(codeName, ArrayToString(api_code_array.ToArray()));
+    }
+}
+
+bool MoonwarmerHandleAPIFunc(string codeName, bool was_here)
+{
+    switch (codeName)
+    {
+        case "gml_GlobalScript_moonwarmer_version":
+            return MoonwarmerAPI_version(codeName, was_here);
+
+        case "gml_GlobalScript_moonwarmer_modcount":
+            return MoonwarmerAPI_modcount(codeName, was_here);
+
+        case "gml_GlobalScript_moonwarmer_get_mod_json":
+            return MoonwarmerAPI_get_mod_json(codeName, was_here);
+
+        case "gml_GlobalScript_moonwarmer_get_all_mod_ids":
+            return MoonwarmerAPI_get_all_mod_ids(codeName, was_here);
+
+        default:
+            return false;
+    }
+}
+
+// these functions feel dumb. they probably are.
+bool MoonwarmerAPI_version(string codeName, bool was_here)
+{
+    lineno = 0;
+    foreach (string line in api_code_array)
+    {
+        if (line.Contains("return"))
+        {
+            api_code_array[lineno] = "return \"" + moonwarmer_version + "\";";
+            return true;
+        }
+        lineno++;
+    }
+
+    return true;
+}
+
+bool MoonwarmerAPI_modcount(string codeName, bool was_here)
+{
+    lineno = 0;
+    foreach (string line in api_code_array)
+    {
+        if (line.Contains("modno = "))
+        {
+            // get only numbers, and add 1
+            int new_no = int.Parse(Regex.Replace(line, @"[^\d]", "")) + 1;
+            api_code_array[lineno] = "var modno = " + new_no.ToString() + ";";
+            return true;
+        }
+        lineno++;
+    }
+
+    return true;
+}
+
+void MAPIInsertCurrent(string txt)
+{
+    api_code_array.Insert(lineno, txt);
+    lineno++;
+}
+
+string MAPIArrayToString<T>(T[] array)
+{
+    string stringy = "[ ";
+    foreach (T item in array)
+        stringy += item.ToString() + ", ";
+    stringy += "]";
+    return stringy;
+}
+
+bool MoonwarmerAPI_get_mod_json(string codeName, bool was_here)
+{
+    lineno = 0;
+    bool add = false;
+    foreach (string line in api_code_array)
+    {
+        if (add)
+        {
+            MAPIInsertCurrent("case \"" + meta.packageID + "\":");
+            string dr_ver = "noone";
+            if (loaded_json.deltaruneVersion is not null)
+                dr_ver = loaded_json.deltaruneVersion.ToString();
+
+            string meta_string = string.Format(
+            """
+            name: "{0}", version: "{1}", packageID: "{2}",
+            """, meta.name, meta.version, meta.packageID);
+
+            string main_string = "metadata: {" + meta_string + "}, deltaruneVersion:" + dr_ver + ",";
+
+            string pkg_types_string = "supportedPackageTypes: " + MAPIArrayToString(loaded_json.supportedPackageTypes) + ",";
+            string dr_variants_string = "deltaruneVariants: " + MAPIArrayToString(loaded_json.deltaruneVariants) + ",";
+
+            string time_string = DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss-fff");
+
+            string manifest_string = "_manfiest: { moonwarmerVersion: \"" + moonwarmer_version + "\", timeString: \"" + time_string + "\", },";
+
+            MAPIInsertCurrent("return {" + main_string + pkg_types_string + dr_variants_string + manifest_string + "};");
+            MAPIInsertCurrent("");
+            return true;
+        }
+        if (line.Contains("case") || line.Contains("default"))
+            add = true;
+        else
+            lineno++;
+    }
+
+    return true;
+}
+
+bool MoonwarmerAPI_get_all_mod_ids(string codeName, bool was_here)
+{
+    lineno = 0;
+    bool add = false;
+    foreach (string line in api_code_array)
+    {
+        if (add)
+        {
+            MAPIInsertCurrent("array_push(modlist, \"" + meta.packageID + "\");");
+            return true;
+        }
+        if (line.Contains("modlist ="))
+            add = true;
+        lineno++;
+    }
+
+    return true;
 }
 
 // SPRITE IMPORT CODE FROM IMPORTGRAPHICS.csx
@@ -1161,7 +1336,12 @@ public class MoonwarmerMetadata
 public class MoonwarmerJson
 {
     public MoonwarmerMetadata metadata { get; set; }
+
     public string[]? supportedPackageTypes { get; set; }
+
+    public string? deltaruneVersion { get; set; }
+
+    public string[]? deltaruneVariants { get; set; }
 }
 
 
