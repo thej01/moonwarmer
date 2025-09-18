@@ -70,3 +70,7 @@ However, if any of you are dedicated enough, I'd *love* to see Moonwarmer forks 
 
 # Contributions 
 *Got a sick feature/bug fix for Moonwarmer?* Hell yeah, make a PR and hopefully that can get merged.
+
+# Credits
+- [Egochka11 (Moonwarmer Sprite)](https://github.com/Egochka11)
+- [Mighty Mr. M (Example mods)](https://gamebanana.com/members/4797850)
