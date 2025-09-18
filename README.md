@@ -19,7 +19,7 @@ Moonwarmer should only be used for specific types of mods.
 Here are types of mods that Moonwarmer perfectly supports.
 
 - Sprite Modifications *(Perfect for Moonwarmer!)*
-- Code Modification *(Works perfect alone, but could conflict with other mods if they both modify the same script.)*
+- Code Modification *(Moonwarmer merges code using DiffPlex so mods can edit the same script files.)*
 - Code Modifiction & New sprites that don't need custom collision or custom origins *(You can't set a collision mask, or edit origin with Moonwarmer.)*
 - *Note for above: The previous note can be circumvented by using gml functions like sprite_set_xoffset & sprite_set_yoffset or sprite_collision_mask*
 - Sound Modifictions/New Sounds *(not external sounds or music! embedded sounds.)*
@@ -38,7 +38,8 @@ Unless UTMT adds room/object exporting/importing, there likely won't be any supp
 I would need to make custom scripts for objects and rooms to ensure best compatability. 
 To be honest, I am not nearly skilled enough for that. (yet...?)
 
-It should also be noted that when Moonwarmer imports scripts, it tries its best to merge things.
+# DiffPlex
+Moonwarmer merges the code of mods when importing using [**DiffPlex**](https://github.com/mmanela/diffplex). The net6.0 version is packaged with Moonwarmer.
 
 The merging works pretty well, *but if two mods change the same line, the last mod loaded will win.*
 

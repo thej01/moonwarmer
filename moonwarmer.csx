@@ -303,7 +303,6 @@ dynamic? threeWayChangeType_OldOnly = null;
 dynamic? threeWayChangeType_NewOnly = null;
 dynamic? threeWayChangeType_BothSame = null;
 dynamic? threeWayChangeType_Conflict = null;
-// TODO: get change types like insertion and deletion so the merging can be almost-perfect!
 if (merge_code)
 {
     Type threeDifType = diffplex.GetType("DiffPlex.ThreeWayDiffer");
