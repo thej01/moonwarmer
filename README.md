@@ -1,17 +1,20 @@
 # Moonwarmer
 Moonwarmer is a mass-import script for utmt built for DELTARUNE.
 
-**It aims to allow people who don't know how to make csx scripts to still be able to make one.**
+Mods in Moonwarmer (or csx) format can be *combined together very easily, allowing for strong multi-mod support.*
 
-It is not as powerful or compatible as a tailor-made csx script, but a **simple csx script is better than no csx script.**
+However, it is *not a replacement for xdelta files due to limitations (unfortunately).*
 
-It also is *not a replacement for xdelta files (unfortunately).*
+But most mods should be able to be converted to Moonwarmer despite those limitations.
+### Let's make DELTARUNE modding better, together!
+
+# NOTE: Please use Bleeding Edge version of UMT for best code merging
 
 # Lil recommendation (PSA)
 You should use *asset_get_index()* when refering to assets when making deltarune mods from now on (not even just Moonwarmer ones), to improve **[GM3P](https://github.com/deltamodders/GM3P)** compatability until **Watercooler** (**Moonwarmer**'s bigger sibling) releases.
 
 # When should I use Moonwarmer???
-Since Moonwarmer is barebones by design, Moonwarmer should only be used for specific types of mods.
+Moonwarmer should only be used for specific types of mods.
 
 Here are types of mods that Moonwarmer perfectly supports.
 
@@ -30,106 +33,38 @@ Here are the types of mods that Moonwarmer does ***NOT*** support.
 
 ***If your mod isn't possible to make with the above limitations, then continue using xdelta's or tailor-made csx scripts.***
 
-Unless UTMT adds room/object exporting/importing, there won't be any support for rooms/objects.
+Unless UTMT adds room/object exporting/importing, there likely won't be any support for rooms/objects.
 
 I would need to make custom scripts for objects and rooms to ensure best compatability. 
 To be honest, I am not nearly skilled enough for that. (yet...?)
 
-# Other limitations
-
 It should also be noted that when Moonwarmer imports scripts, it tries its best to merge things.
 
-The merging works pretty well, but if two mods change the same line, the last mod loaded will win.
+The merging works pretty well, *but if two mods change the same line, the last mod loaded will win.*
 
-# Moonwarmer Project Format
-Here is how a Moonwarmer project folder is structured
-```
+# Moonwarmer API
+Moonwarmer has an API that can be used to retrieve things like other Moonwarmer mod information from within the data.win. This can allow for *cross-mod interactions!*
 
-└── (root of the archive/project folder)
-    ├── "_moonwarmer.json" (an important file that helps Moonwarmer recongize a project.)
-    └── "chapter(num)" folder (will be loaded when the appropriate DELTARUNE chapter is loaded. chapter0 is the launcher.)
-        Note, when Moonwarmer loads the folders below, subfolders will be properly loaded too!
-        └── "scripts"/"code"/"objects" folder (where .gml files are held)
-        └── "sprites" folder (where sprites are be held)
-        └── "shaders" folder (where subfolders exported from ExportShaders.csx are held)
-        └── "audio"/"sounds"/"mus" folder (where .wav files are held. .ogg files will not work.)
-    └── "_everychapter" folder (will ALWAYS be loaded into the data.win)
-        Same structure as a chapter(num) folder.
-```
+## [Read the documentation here!]()
 
-# _moonwarmer.json format
-*_moonwarmer.json* is a file that is stored in your project folder that makes it a Moonwarmer project. 
+# Moonwarmer Example Mods
+*Now, I assume you probably want to make a mod for moonwarmer since you've read this much...*
 
-Here is how it is structured:
+## [Documentation for that is here! It also contains a template project and some example mods.](https://github.com/thej01/moonwarmer-example-mods)
 
-```json
-{
-    "metadata": 
-    {
-        "name": "My Visual Mod Name",
-        "version": "vVersionNumber",
-        "packageID": "hostedurl.modname.authorname"
-    },
+# PSA: If Moonwarmer fails to import a project...
+*First off, if Moonwarmer fails during importing, please revert to the vanilla data.win if you wish to attempt further imports.*
+*This should prevent corruption and further errors.*
 
-    "deltaruneVersion": "1.04",
-    "supportedPackageTypes": 
-    [
-        "DELTAMOD",
-        "DELTAHUB"
-    ],
-    "deltaruneVariants":
-    [
-        "fullgame",
-        "demo",
-        "demo-lts"
-    ]
-}
-```
+Second off, make a bug report on [**this page in the Issues tab**](https://github.com/thej01/moonwarmer/issues)! Please provide what mod(s) you were using, and the version & variant of DELTARUNE you're using.
 
-Let me break it down for you, user.
+# Does Moonwarmer work for other GameMaker games?
+Sadly, no. The way Moonwarmer is built simply isn't viable for other games and other versions of GameMaker.
+(I mean, it could *hypothetically* work for some. But I wouldn't recommend it at all.)
 
-## Metadata Section
+And no, I won't be adding more generalized support in the future myself...
 
-`metadata` stores all important mod information. It's what makes your mod recognizable.
-This section may be familiar to you if you've made a mod in the DELTAMOD/DELTAHUB format.
-**If your mod is for the DELTAMOD/DELTAHUB format, please, make the `metadata` values the same as in _deltaModInfo.json**
+However, if any of you are dedicated enough, I'd *love* to see Moonwarmer forks for other games (or even a fork that makes Moonwarmer more generalized for GameMaker games)
 
-The `name` field is just a visual mod name.
-
-The `version` field is the version of your mod. Increase this everytime you update! It helps other mods recognize your mod better.
-*(Note, version format does not have to be the same as in the example. It is simply what I personally use. Just keep it consistent!)*
-
-*`packageID` is a very important field.* It is a *unique* identifier for your mod. It follows this format: `hostedurl.modname.authorname`
-Here's how an example would look like: `gamebanana.bettersaves.thej01`
-***Never, NEVER change this value after release.***
-
-## supportedPackageTypes
-**This is an important field!**
-
-The `deltaruneVariant` field is the supported mod formats this project is packaged with. Leave this empty if this mod is standalone.
-
-*Note, if you add anything to this field, the Moonwarmer.csx script will enter AUTO mode. This means there won't be any prompts, which makes the modloader's jobs easier*
-
-### Supported Values
-- "DELTAMOD"
-- "DELTAHUB"
-
-## deltaruneVariants
-**This is an important field!**
-
-The `deltaruneVariants` field are the *supported variants of DELTARUNE the project is made for*.
-
-While it is an *array*, which means it supports several values, *it is recommended for most workflows that this stays at one entry*.
-
-### Supported Values
-- "fullgame"
-- "demo"
-- "demo-lts"
-
-## Other Fields
-
-`deltaruneVersion` is the version of DELTARUNE this mod was made for. (it doesn't do anything yet lol)
-
-**(Please make this the same as the DELTAMOD/DELTAHUB deltaruneVersion field if you are making this mod for those.)**
-
-
+# Contributions 
+*Got a sick feature/bug fix for Moonwarmer?* Hell yeah, make a PR and hopefully that can get merged.
