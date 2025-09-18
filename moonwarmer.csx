@@ -584,7 +584,7 @@ bool MoonwarmerHandleAPIFunc(string codeName, bool was_here)
             return MoonwarmerAPI_get_all_mod_ids(codeName, was_here);
 
         case "gml_GlobalScript_moonwarmer_modcount":
-        case "gml_GlobalScript_moonwarmer_exists":
+        case "gml_GlobalScript_moonwarmer_mod_exists":
         case "gml_GlobalScript_moonwarmer_mod_split_id":
         case "gml_GlobalScript_moonwarmer_timestring_split":
             return true;
