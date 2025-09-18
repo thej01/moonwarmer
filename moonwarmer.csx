@@ -70,7 +70,7 @@ string[] codemerging_always_add_exact =
 
 Assembly? diffplex = null;
 
-string moonwarmer_version = "v2";
+string moonwarmer_version = "v3";
 
 string scriptDir = Path.GetDirectoryName(ScriptPath);
 
@@ -89,12 +89,12 @@ if (moonwarmer_gml_files.Length <= 0)
 string? project_folder = scriptDir + "/";
 if (!packaged_moonwarmer)
 {
-    ScriptMessage("Please select a moonwarmer STANDALONE folder/zip file. It should contain a file called _moonwarmer.json");
+    ScriptMessage("Please select a moonwarmer STANDALONE folder. It should contain a file called _moonwarmer.json");
     project_folder = PromptChooseDirectory();
 }
 
 if (project_folder is null)
-    throw new ScriptException("A folder/zip file was not set.");
+    throw new ScriptException("A folder was not set.");
 
 string moonwarmer_json = project_folder + "_moonwarmer.json";
 
@@ -497,15 +497,15 @@ string MoonwarmerCustomMerge(dynamic diffResult, bool append_conflicts = false)
         }
         else if (block.ChangeType == threeWayChangeType_Conflict)
         {
-            // Last mod wins
-            for (int i = 0; i < block.NewCount; i++)
-                mergedPieces.Add(diffResult.PiecesNew[newIndex + i]);
-
             if (append_conflicts)
             {
                 for (int i = 0; i < block.OldCount; i++)
                     mergedPieces.Add(diffResult.PiecesOld[oldIndex + i]);
             }
+
+            // Last mod wins
+            for (int i = 0; i < block.NewCount; i++)
+                mergedPieces.Add(diffResult.PiecesNew[newIndex + i]);
         }
 
         baseIndex += block.BaseCount;
@@ -560,14 +560,17 @@ bool MoonwarmerHandleAPIFunc(string codeName, bool was_here)
         case "gml_GlobalScript_moonwarmer_version":
             return MoonwarmerAPI_version(codeName, was_here);
 
-        case "gml_GlobalScript_moonwarmer_modcount":
-            return MoonwarmerAPI_modcount(codeName, was_here);
-
         case "gml_GlobalScript_moonwarmer_get_mod_json":
             return MoonwarmerAPI_get_mod_json(codeName, was_here);
 
         case "gml_GlobalScript_moonwarmer_get_all_mod_ids":
             return MoonwarmerAPI_get_all_mod_ids(codeName, was_here);
+
+        case "gml_GlobalScript_moonwarmer_modcount":
+        case "gml_GlobalScript_moonwarmer_exists":
+        case "gml_GlobalScript_moonwarmer_mod_split_id":
+        case "gml_GlobalScript_moonwarmer_timestring_split":
+            return true;
 
         default:
             return false;
@@ -583,24 +586,6 @@ bool MoonwarmerAPI_version(string codeName, bool was_here)
         if (line.Contains("return"))
         {
             api_code_array[lineno] = "return \"" + moonwarmer_version + "\";";
-            return true;
-        }
-        lineno++;
-    }
-
-    return true;
-}
-
-bool MoonwarmerAPI_modcount(string codeName, bool was_here)
-{
-    lineno = 0;
-    foreach (string line in api_code_array)
-    {
-        if (line.Contains("modno = "))
-        {
-            // get only numbers, and add 1
-            int new_no = int.Parse(Regex.Replace(line, @"[^\d]", "")) + 1;
-            api_code_array[lineno] = "var modno = " + new_no.ToString() + ";";
             return true;
         }
         lineno++;

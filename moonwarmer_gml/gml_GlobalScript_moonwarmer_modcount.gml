@@ -1,6 +1,4 @@
 function moonwarmer_modcount()
 {
-    // we find replace this
-    var modno = 0;
-    return modno;
+    return array_length(moonwarmer_get_all_mod_ids());
 }
