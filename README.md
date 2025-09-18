@@ -1,6 +1,6 @@
 # ![Moonwarmer Logo](_img/moonwarmer_logo_ext.png "Moonwarmer Logo")
 
-Moonwarmer is a mass-import script for utmt built for DELTARUNE.
+Moonwarmer (not to be confused with *Watercooler*) is a mass-import script for utmt built for DELTARUNE.
 
 Mods in Moonwarmer (or csx) format can be *combined together very easily, allowing for strong multi-mod support.*
 
@@ -10,6 +10,18 @@ But most mods should be able to be converted to Moonwarmer despite those limitat
 ### Let's make DELTARUNE modding better, together!
 
 # [NOTE: Please use Bleeding Edge version of UMT for best code merging](https://github.com/UnderminersTeam/UndertaleModTool/releases/tag/bleeding-edge)
+
+# How good is the multi-mod support?
+See for yourself! Watch this video of 5 Moonwarmer mods imported at once.
+
+Mods used:
+- Window Control [(Mighty Mr. M)](https://gamebanana.com/members/4797850)
+- BOARD S.K. per [(Mighty Mr. M)](https://gamebanana.com/members/4797850)
+- BetterSaves
+- Mantle Kris *(Palette Shader mod, not a sprite replacement like you may think)*
+- TV WORLD Plays in Battles
+
+[![Moonwarmer 5 Mods Video](https://img.youtube.com/vi/_SjNyhQAAQU/0.jpg)](https://www.youtube.com/watch?v=_SjNyhQAAQU "Moonwarmer 5 Mods Video")
 
 # Lil recommendation (PSA)
 You should use *asset_get_index()* when refering to assets when making deltarune mods from now on (not even just Moonwarmer ones), to improve **[GM3P](https://github.com/deltamodders/GM3P)** compatability until **Watercooler** (**Moonwarmer**'s bigger sibling) releases.
@@ -45,7 +57,7 @@ Moonwarmer merges the code of mods when importing using [**DiffPlex**](https://g
 The merging works pretty well, *but if two mods change the same line, the last mod loaded will win.*
 
 # Moonwarmer API
-Moonwarmer has an API that can be used to retrieve things like other Moonwarmer mod information from within the data.win. This can allow for *cross-mod interactions!*
+Moonwarmer has an API that can be used to retrieve things like *other Moonwarmer mod information from within the data.win*. This can allow for *cross-mod interactions!*
 
 ## [Read the documentation here!]()
 
