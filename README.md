@@ -20,7 +20,7 @@ Moonwarmer should only be used for specific types of mods.
 Here are types of mods that Moonwarmer perfectly supports.
 
 - Sprite Modifications *(Perfect for Moonwarmer!)*
-- Code Modification *(Moonwarmer merges code using DiffPlex so mods can edit the same script files.)*
+- Code Modification *(Moonwarmer merges code using [**DiffPlex**](https://github.com/mmanela/diffplex) so mods can edit the same script files.)*
 - Code Modifiction & New sprites that don't need custom collision or custom origins *(You can't set a collision mask, or edit origin with Moonwarmer.)*
 - *Note for above: The previous note can be circumvented by using gml functions like sprite_set_xoffset & sprite_set_yoffset or sprite_collision_mask*
 - Sound Modifictions/New Sounds *(not external sounds or music! embedded sounds.)*
