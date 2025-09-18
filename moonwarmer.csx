@@ -116,8 +116,9 @@ if (loaded_json is null || meta is null || meta.name is null || meta.packageID i
 
 if (loaded_json.supportedPackageTypes is null)
     loaded_json.supportedPackageTypes = [];
+// if missing, assume fullgame
 if (loaded_json.deltaruneVariants is null)
-    loaded_json.deltaruneVariants = [];
+    loaded_json.deltaruneVariants = ["fullgame"];
 
 // if enabled, it just auto detects the chapter without confirmation (which should work fine, but just in case you can disable this)
 // if disabled, it will prompt the user to input the chapter number (with the autodetect value being the default)
@@ -156,23 +157,40 @@ bool noMasksForBasicRectangles = Data.IsVersionAtLeast(2022, 9); // TODO: figure
 
 // -- the good shit --
 
-// do chapter 0 for launcher
+string gameType = "fullgame";
+string display_name = Data.GeneralInfo.DisplayName.Content;
+
+// DELTARUNEdemo's AppID (only seems to be in non-lts branch?)
+if (Data.GeneralInfo.SteamAppID == 1671210)
+    gameType = "demo";
+
+// TODO: figure out a way to check for LTS demo.
+
+if (!loaded_json.deltaruneVariants.Contains(gameType))
+    throw new ScriptException("The mod " + meta.name + " only supports deltarune variants\n\n\"" + ArrayToString(loaded_json.deltaruneVariants) + "\"\n\nThis data.win is type: \"" + gameType + "\"");
+
+// do chapter 0 for launcher (or non-lts demo)
 int chapter = 1;
+if (gameType == "demo")
+    chapter = 0;
 
 // get the chapter number from the digits in the display name (fucking stupid, i know)
-string nums = Regex.Replace(Data.GeneralInfo.DisplayName.Content, @"[^\d]", "");
+string nums = Regex.Replace(display_name, @"[^\d]", "");
 
-// default to Launcher ig
-if (!int.TryParse(nums, out chapter))
-    chapter = 0;
-if (!autodetect_chapter)
+if (gameType != "demo")
 {
-    string txt = SimpleTextInput("Chapter Number", "Input Chapter number (0 for launcher) Autodetected as chapter " + chapter.ToString(), chapter.ToString(), false);
-    if (txt is null)
-        throw new ScriptException("The chapter number was not set.");
-    bool worked = int.TryParse(txt, out chapter);
-    if (!worked)
-        throw new ScriptException("Failed to parse chapter number.");
+    // default to Launcher ig
+    if (!int.TryParse(nums, out chapter))
+        chapter = 0;
+    if (!autodetect_chapter)
+    {
+        string txt = SimpleTextInput("Chapter Number", "Input Chapter number (0 for launcher) Autodetected as chapter " + chapter.ToString(), chapter.ToString(), false);
+        if (txt is null)
+            throw new ScriptException("The chapter number was not set.");
+        bool worked = int.TryParse(txt, out chapter);
+        if (!worked)
+            throw new ScriptException("Failed to parse chapter number.");
+    }
 }
 
 string subProjName = "";
