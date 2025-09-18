@@ -1,4 +1,5 @@
-# Moonwarmer
+# ![Moonwarmer Logo](_img/moonwarmer_logo_ext.png "Moonwarmer Logo")
+
 Moonwarmer is a mass-import script for utmt built for DELTARUNE.
 
 Mods in Moonwarmer (or csx) format can be *combined together very easily, allowing for strong multi-mod support.*
@@ -8,7 +9,7 @@ However, it is *not a replacement for xdelta files due to limitations (unfortuna
 But most mods should be able to be converted to Moonwarmer despite those limitations.
 ### Let's make DELTARUNE modding better, together!
 
-# NOTE: Please use Bleeding Edge version of UMT for best code merging
+# [NOTE: Please use Bleeding Edge version of UMT for best code merging](https://github.com/UnderminersTeam/UndertaleModTool/releases/tag/bleeding-edge)
 
 # Lil recommendation (PSA)
 You should use *asset_get_index()* when refering to assets when making deltarune mods from now on (not even just Moonwarmer ones), to improve **[GM3P](https://github.com/deltamodders/GM3P)** compatability until **Watercooler** (**Moonwarmer**'s bigger sibling) releases.
