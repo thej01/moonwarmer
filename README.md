@@ -59,7 +59,7 @@ The merging works pretty well, *but if two mods change the same line, the last m
 # Moonwarmer API
 Moonwarmer has an API that can be used to retrieve things like *other Moonwarmer mod information from within the data.win*. This can allow for *cross-mod interactions!*
 
-## [Read the documentation here!]()
+## [Read the documentation here!](https://github.com/thej01/moonwarmer-example-mods/wiki)
 
 # Moonwarmer Example Mods
 *Now, I assume you probably want to make a mod for moonwarmer since you've read this much...*
