@@ -15,8 +15,8 @@ But most mods should be able to be converted to Moonwarmer despite those limitat
 See for yourself! Watch this video of 5 Moonwarmer mods imported at once.
 
 Mods used:
-- Window Control [(Mighty Mr. M)](https://gamebanana.com/members/4797850)
-- BOARD S.K. per [(Mighty Mr. M)](https://gamebanana.com/members/4797850)
+- Window Control [***(Mighty Mr. M)***](https://gamebanana.com/members/4797850)
+- BOARD S.K. per [***(Mighty Mr. M)***](https://gamebanana.com/members/4797850)
 - BetterSaves
 - Mantle Kris *(Palette Shader mod, not a sprite replacement like you may think)*
 - TV WORLD Plays in Battles
