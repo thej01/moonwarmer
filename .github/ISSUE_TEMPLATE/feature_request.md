@@ -1,7 +1,7 @@
 ---
 name: Feature request
 about: Suggest new features for Moonwarmer to implement
-title: "[FEACHER]"
+title: "[FEACHER] FeatureNameHere"
 labels: enhancement
 assignees: thej01
 
