@@ -70,7 +70,7 @@ string[] codemerging_always_add_exact =
 
 Assembly? diffplex = null;
 
-string moonwarmer_version = "v3";
+string moonwarmer_version = "v4";
 
 string scriptDir = Path.GetDirectoryName(ScriptPath);
 
@@ -86,7 +86,8 @@ if (moonwarmer_gml_files.Length <= 0)
 
 // -- loading project --
 
-string? project_folder = scriptDir + "/";
+// default to finding an "src" folder in the same directory if we are packaged with the mod
+string? project_folder = scriptDir + "/src/";
 if (!packaged_moonwarmer)
 {
     ScriptMessage("Please select a moonwarmer STANDALONE folder. It should contain a file called _moonwarmer.json");
