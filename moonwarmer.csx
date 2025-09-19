@@ -70,7 +70,7 @@ string[] codemerging_always_add_exact =
 
 Assembly? diffplex = null;
 
-string moonwarmer_version = "v4";
+string moonwarmer_version = "v5";
 
 string scriptDir = Path.GetDirectoryName(ScriptPath);
 
@@ -588,6 +588,7 @@ bool MoonwarmerHandleAPIFunc(string codeName, bool was_here)
         case "gml_GlobalScript_moonwarmer_mod_exists":
         case "gml_GlobalScript_moonwarmer_mod_split_id":
         case "gml_GlobalScript_moonwarmer_timestring_split":
+        case "gml_GlobalScript_moonwarmer_version_atleast":
             return true;
 
         default:
