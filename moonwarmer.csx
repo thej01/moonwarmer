@@ -26,7 +26,12 @@ EnsureDataLoaded();
 
 // -- configuration -- 
 
+// Skips all questions and automatically imports project
 bool packaged_moonwarmer = false;
+
+// Heh, this is kinda dumb. I love it.
+if (Path.GetFileNameWithoutExtension(ScriptPath) == "moonwarmer_packaged")
+    packaged_moonwarmer = true;
 
 // Try to merge code on existing files. Seems to work well but i cant trust anything.
 // This WILL merge code even if this is the first mod we're installing, and that's because
@@ -90,7 +95,7 @@ if (moonwarmer_gml_files.Length <= 0)
 string? project_folder = scriptDir + "/src/";
 if (!packaged_moonwarmer)
 {
-    ScriptMessage("Please select a moonwarmer STANDALONE folder. It should contain a file called _moonwarmer.json");
+    ScriptMessage("Please select a moonwarmer mod folder.\nIt should contain a file called _moonwarmer.json");
     project_folder = PromptChooseDirectory();
 }
 
@@ -104,7 +109,7 @@ if (!File.Exists(moonwarmer_json))
     if (!packaged_moonwarmer)
         throw new ScriptException("_moonwarmer.json not found! Make sure you selected the folder that contains _moonwarmer.json");
     else
-        throw new ScriptException("_moonwarmer.json not found! Is moonwarmer.csx a directory too high/low? moonwarmer.csx should be right outside the src folder.");
+        throw new ScriptException("_moonwarmer.json not found!\nIs moonwarmer_packaged.csx a directory too high/low? moonwarmer_packaged.csx should be right outside the src folder.");
 }
 
 // load the json file
@@ -123,8 +128,9 @@ if (loaded_json.deltaruneVariants is null)
 
 // if enabled, it just auto detects the chapter without confirmation (which should work fine, but just in case you can disable this)
 // if disabled, it will prompt the user to input the chapter number (with the autodetect value being the default)
-// also setting it like this kinda dumb but whatever
-bool autodetect_chapter = loaded_json.supportedPackageTypes.Length > 0;
+
+// Fuck you lets just do this :fire:
+bool autodetect_chapter = packaged_moonwarmer;
 
 // Load assembly
 if (merge_code)
@@ -136,8 +142,8 @@ if (merge_code)
         diffplex = Assembly.LoadFrom(diffplex_asm_path);
     if (diffplex is null)
     {
-        if (!autodetect_chapter)
-            ScriptWarning("Couldn't find DiffPlex.dll at " + diffplex_asm_path + "\nThis will not prevent the script from running, but code will not be merged.");
+        // Fuck you im throwing an error now :fire:
+        throw new ScriptException("Couldn't find Diffplex at: " + diffplex_asm_path + "\nPlease ensure that the moonwarmer_dependencies folder is in the same folder as the moonwarmer script.");
         merge_code = false;
     }
 }
@@ -452,7 +458,10 @@ await Task.Run(() =>
 DisableAllSyncBindings();
 
 await StopProgressBarUpdater();
-ScriptMessage("Project " + subProjName + " successfully imported.");
+
+// Just to be safe (Does GM3P lock up from ScriptMessages? Idk how UTMT-CLI works.)
+if (!packaged_moonwarmer)
+    ScriptMessage("Project " + subProjName + " successfully imported.");
 
 string MoonwarmerQuickDecompile(string codeName)
 {
