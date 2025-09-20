@@ -24,7 +24,8 @@ Mods used:
 [![Moonwarmer 5 Mods Video](https://img.youtube.com/vi/_SjNyhQAAQU/0.jpg)](https://www.youtube.com/watch?v=_SjNyhQAAQU "Moonwarmer 5 Mods Video")
 
 # Lil recommendation (PSA)
-You should use *asset_get_index()* when refering to assets when making deltarune mods from now on (not even just Moonwarmer ones), to improve **[GM3P](https://github.com/deltamodders/GM3P)** compatability until **Watercooler** (**Moonwarmer**'s bigger sibling) releases.
+> [!NOTE]
+> You should use *asset_get_index()* when refering to assets when making deltarune mods from now on (not even just Moonwarmer ones), to improve **[GM3P](https://github.com/deltamodders/GM3P)** compatability until **Watercooler** (**Moonwarmer**'s bigger sibling) releases.
 
 # When should I use Moonwarmer???
 Moonwarmer should only be used for specific types of mods.
@@ -54,7 +55,8 @@ To be honest, I am not nearly skilled enough for that. (yet...?)
 # DiffPlex
 Moonwarmer merges the code of mods when importing using [**DiffPlex**](https://github.com/mmanela/diffplex). The net6.0 version is packaged with Moonwarmer.
 
-The merging works pretty well, *but if two mods change the same line, the last mod loaded will win.*
+> [!WARNING]
+> The merging works pretty well, *but if two mods change the same line, the last mod loaded will win.*
 
 # Moonwarmer API
 Moonwarmer has an API that can be used to retrieve things like *other Moonwarmer mod information from within the data.win*. This can allow for *cross-mod interactions!*
