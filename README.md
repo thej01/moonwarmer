@@ -1,3 +1,12 @@
+# This repo is an archive!
+I lost interest on Moonwarmer ages ago. Mod manager support was cancelled and I forgot about the project as a whole.
+Theres much better tools out there for getting the desired effect.
+Here's some alternatives you can look at.
+- [G3M](https://gamebanana.com/tools/20615)
+- [UTMT Project System](https://github.com/UnderminersTeam/UndertaleModTool)
+- [Deltamod](https://gamebanana.com/tools/20575)
+- [Deltamod 2.0 (unreleased)](https://gamebanana.com/wips/101708)
+
 # ![Moonwarmer Logo](_img/moonwarmer_logo_ext.png "Moonwarmer Logo")
 
 Moonwarmer (not to be confused with *Watercooler*) is a mass-import script for utmt built for DELTARUNE.
